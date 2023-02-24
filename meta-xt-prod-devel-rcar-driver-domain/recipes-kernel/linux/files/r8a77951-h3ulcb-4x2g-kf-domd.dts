@@ -16,13 +16,67 @@
 #define PHANDLE_GIC (65000)
 
 / {
+	reserved-memory {
+                #address-cells = <0x2>;
+                #size-cells = <0x2>;
+                ranges;
+                cr7_cma: linux,cma@58000000 {
+                        compatible = "shared-dma-pool";
+                        reg = <0x0 0x58000000 0x0 0x2000000>;
+                        no-map;
+                        /delete-property/ reusable;
+                        /delete-property/ linux,cma-default;
+                };
+                /delete-node/ linux,lossy_decompress@54000000;
+                /delete-node/ linux,adsp@57000000;
+                /delete-node/ linux,multimedia@70000000;
+                /delete-node/ linux,cma@57000000;
+        };
+        /delete-node/ mmngr;
+        rvgc {
+                dma-ranges = <0x0 0x0 0x0 0x0 0x1 0x0>;
+                rvgc-memory {
+                        memory-region = <&cr7_cma>;
+                };
+                displays {
+                        display-0 {
+                                display-map = <0>;
+                                layers {
+                                        primary{
+                                                /* Layer shold display the information at all display */
+                                                layer-map=<0x3>;
+                                                size-w=<1920>;
+                                                size-h=<720>;
+                                                pos-x=<0>;
+                                                pos-y=<0>;
+                                                pos-override;
+                                        };
+                                };
+                        };
+                };
+        };
+
 	soc {
 		/* This must point to Xen interrupt-parent */
 		interrupt-parent = <PHANDLE_GIC>;
 	};
 
 	passthrough {
-	};
+                #address-cells = <0x2>;
+                #size-cells = <0x2>;
+                interrupt-parent = <PHANDLE_GIC>;
+                compatible = "simple-bus";                 
+
+		xen_rproc {
+                        interrupt-parent = <PHANDLE_GIC>;
+                        dma-ranges = <0x0 0x0 0x0 0x0 0x1 0x0>;
+            		dma-coherent;
+                        memory-region = <&cr7_cma>;
+                        compatible = "xen-rproc";
+                        interrupts = <0x00 233 0x04>;
+                        interrupt-names = "xen-rproc";
+                };
+    	};
 
 	/*
 	 * When creating DT for the guest domain Xen inserts only dummy CPU nodes.
@@ -46,6 +100,16 @@
 	/delete-node/thermal-zones;
 	/delete-node/pmu_a57;
 	/delete-node/pmu_a53;
+
+	/* CR7 is responislbe for graphics */
+	/delete-node/ cvbs-in;
+	/delete-node/ hdmi-in;
+	/delete-node/ hdmi0-out;
+	/delete-node/ lvds-decoder;
+
+	/delete-node/ lvds;
+	/delete-node/ vga;
+	/delete-node/ vga-encoder;
 };
 
 /delete-node/&adsp;
